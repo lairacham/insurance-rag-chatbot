@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from pymilvus import MilvusClient
 from langchain_community.embeddings import HuggingFaceEmbeddings
+from openai import OpenAI
 
 load_dotenv()
 
@@ -17,13 +18,20 @@ client = MilvusClient(
     token=ZILLIZ_TOKEN,
 )
 
-# TODO: Update to paid model after testing
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
+openai = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=OPENROUTER_API_KEY
 )
 
+def embed(text: str) -> list[float]:
+    embeddings = openai.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
+    return embeddings.data[0].embedding
+
 def retrieve(query: str, top_k: int = 3) -> str:
-    vector = embeddings.embed_query(query)
+    vector = embed(query)
     results = client.search(
         collection_name="insurance_kb",
         data=[vector],

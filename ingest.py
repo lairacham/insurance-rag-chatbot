@@ -5,7 +5,6 @@ from langchain_community.document_loaders import TextLoader, DirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from pymilvus import MilvusClient
-from langchain_community.embeddings import HuggingFaceEmbeddings
 
 load_dotenv()
 
@@ -55,7 +54,7 @@ def upload_embeddings(embeddings, chunks):
     Upload embeddings to Zilliz
     """
     texts = [chunk.page_content for chunk in chunks]
-    vectors = embeddings.embed_documents(texts)
+    vectors = embeddings
 
     data = [
         {
@@ -69,13 +68,19 @@ def upload_embeddings(embeddings, chunks):
 
     print(f"Inserted {result['insert_count']} chunks!")
 
+def embed(text: str) -> list[float]:
+    embeddings = openai.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
+    return embeddings.data[0].embedding
+
 def main():
     documents = load_documents()
 
     chunks = split_documents(documents)
 
-    # TODO: Change to paid embedding model
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    embeddings = [embed(chunk.page_content) for chunk in chunks]
     
     # Embed the chunks and upload to Zilliz
     upload_embeddings(embeddings=embeddings, chunks=chunks)
