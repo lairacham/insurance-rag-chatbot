@@ -1,7 +1,7 @@
 import os
 import json
 from state import ChatState
-from helpers import _get_last_user_message, _chat, _ask_next_question
+from helpers import _get_last_user_message, _chat, _ask_next_question, _chat_with_history
 from rag import retrieve
 from validators import validate_quote_data
 
@@ -123,8 +123,12 @@ def rag_node(state: ChatState) -> ChatState:
     """
     last_user_message = _get_last_user_message(state)
 
-    context = [message["content"] for message in state["messages"]]
-    context = retrieve("\n".join(context))
+    context = retrieve(last_user_message)
+
+    history = [
+        m for m in state["messages"]
+        if m["role"] in ("user", "assistant")
+    ]
 
     system = f"""You are a helpful assistant for ShieldBase Insurance.
 Use ONLY the context below to answer the user's question.
@@ -133,7 +137,11 @@ Be concise and friendly.
 
 Context:
 {"\n".join(context)}"""
-    answer = _chat(system, last_user_message)
+    messages = [
+        *history,
+        {"role": "user", "content": last_user_message}
+    ]
+    answer = _chat_with_history(system, messages)
     state["messages"].append({ "role": "assistant", "content": answer })
     state["mode"] = "idle"
 

@@ -26,8 +26,19 @@ def _chat(system: str, user: str) -> str:
             {"role": "system", "content": system},
             {"role": "user",   "content": user},
         ],
+        temperature=0
     )
     return response.choices[0].message.content.strip()
+
+def _chat_with_history(system: str, messages: list[dict]) -> str:
+    response = llm.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": system},
+            *messages
+        ]
+    )
+    return response.choices[0].message.content
 
 def _first_question(product: str) -> str:
     questions = {
